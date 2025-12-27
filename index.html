@@ -438,9 +438,15 @@
                                         <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">管理備份目的地</h3>
                                         {backupTypes.map(type => (
                                             <div key={type.id} className="bg-slate-50 p-5 rounded-3xl flex items-center justify-between gap-4">
-                                                <div className="flex items-center gap-3 font-bold">
+                                                <div className="flex items-center gap-3 font-bold flex-1 min-w-0">
                                                     <div className="p-2 bg-white rounded-xl shadow-sm text-blue-600"><Icon name={type.iconName} size={20} /></div>
-                                                    {type.label}
+                                                    <input
+                                                        type="text"
+                                                        value={type.label}
+                                                        onChange={e => setBackupTypes(backupTypes.map(t => t.id === type.id ? { ...t, label: e.target.value } : t))}
+                                                        placeholder="媒介名稱..."
+                                                        className="bg-white border-none rounded-xl px-3 py-2 font-bold text-sm outline-none focus:ring-2 ring-blue-100 shadow-sm w-full min-w-0"
+                                                    />
                                                 </div>
                                                 <div className="flex items-center gap-3">
                                                     <input type="number" value={type.totalGb} onChange={e => setBackupTypes(backupTypes.map(t=>t.id===type.id?{...t,totalGb:parseInt(e.target.value)||0}:t))} className="bg-white border-none rounded-xl px-3 py-2 text-right w-24 font-bold text-sm outline-none focus:ring-2 ring-blue-100 shadow-sm" />
