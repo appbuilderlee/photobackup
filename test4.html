@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>相片備份助手 PRO V4</title>
+    <!-- 載入必要資源 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+        html { height: 100%; height: -webkit-fill-available; }
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            min-height: 100%;
+            min-height: -webkit-fill-available;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .glass-morphism { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+        .animate-spin-slow { animation: spin 3s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // 自定義 Icon 組件，包含更豐富的圖示庫
+        const Icon = ({ name, size = 24, className = "", strokeWidth = 2 }) => {
+            const icons = {
+                HardDrive: <React.Fragment><path d="M14 18V12M10 18V12M2 8H22M2 21H22M2 17L3.4 9.1C3.7 7.3 5.2 6 7 6H17C18.8 6 20.3 7.3 20.6 9.1L22 17M2 12V17M22 12V17M11 3H13" /></React.Fragment>,
+                Cloud: <React.Fragment><path d="M17.5 19c2.5 0 4.5-2 4.5-4.5 0-2.3-1.7-4.2-4-4.5l-1.3-.1c-.7-3.3-3.6-5.9-7.2-5.9-4.1 0-7.5 3.4-7.5 7.5 0 .3 0 .6.1.9C1.1 13.3 0 14.5 0 16c0 1.7 1.3 3 3 3h14.5z" /></React.Fragment>,
+                Users: <React.Fragment><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></React.Fragment>,
+                Usb: <React.Fragment><path d="M13.5 2c1.4 0 2.5 1.1 2.5 2.5V11c0 .5-.2 1-.5 1.4l-3 4.1c-.3.4-.5.9-.5 1.5v2c0 1.1-.9 2-2 2s-2-.9-2-2v-2c0-.6-.2-1.1-.5-1.5l-3-4.1c-.3-.4-.5-.9-.5-1.4V4.5C4 3.1 5.1 2 6.5 2h7zM10 2v4M7 2v2M13 2v2M10 22v-4" /></React.Fragment>,
+                Plus: <React.Fragment><path d="M12 5v14M5 12h14" /></React.Fragment>,
+                Trash2: <React.Fragment><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6" /></React.Fragment>,
+                ChevronUp: <React.Fragment><path d="m18 15-6-6-6 6" /></React.Fragment>,
+                ChevronDown: <React.Fragment><path d="m6 9 6 6 6-6" /></React.Fragment>,
+                Download: <React.Fragment><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></React.Fragment>,
+                Upload: <React.Fragment><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" /></React.Fragment>,
+                LayoutGrid: <React.Fragment><rect width="7" height="7" x="3" y="3" rx="1" /><rect width="7" height="7" x="14" y="3" rx="1" /><rect width="7" height="7" x="14" y="14" rx="1" /><rect width="7" height="7" x="3" y="14" rx="1" /></React.Fragment>,
+                List: <React.Fragment><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></React.Fragment>,
+                Table2: <React.Fragment><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M3 15h18M9 3v18M15 3v18" /></React.Fragment>,
+                Edit2: <React.Fragment><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></React.Fragment>,
+                Save: <React.Fragment><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></React.Fragment>,
+                X: <React.Fragment><path d="M18 6 6 18M6 6l12 12" /></React.Fragment>,
+                CheckCircle2: <React.Fragment><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></React.Fragment>,
+                Circle: <React.Fragment><circle cx="12" cy="12" r="10" /></React.Fragment>,
+                Search: <React.Fragment><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></React.Fragment>,
+                Settings: <React.Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></React.Fragment>,
+                Database: <React.Fragment><ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5" /><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3" /></React.Fragment>,
+                Archive: <React.Fragment><rect width="20" height="5" x="2" y="3" rx="1" /><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" /><path d="M10 12h4" /></React.Fragment>,
+                Server: <React.Fragment><rect width="20" height="8" x="2" y="2" rx="2" ry="2" /><rect width="20" height="8" x="2" y="14" rx="2" ry="2" /><line x1="6" x2="6.01" y1="6" y2="6" /><line x1="6" x2="6.01" y1="18" y2="18" /></React.Fragment>,
+                Smartphone: <React.Fragment><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><path d="M12 18h.01" /></React.Fragment>,
+                ShieldCheck: <React.Fragment><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" /><path d="m9 12 2 2 4-4" /></React.Fragment>,
+                ChevronLeft: <React.Fragment><path d="m15 18-6-6 6-6" /></React.Fragment>,
+                AlertCircle: <React.Fragment><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></React.Fragment>,
+                ArrowUpDown: <React.Fragment><path d="m21 16-4 4-4-4" /><path d="M17 20V4" /><path d="m3 8 4-4 4 4" /><path d="M7 4v16" /></React.Fragment>,
+                PieChart: <React.Fragment><path d="M21.21 15.89A10 10 0 1 1 8 2.83" /><path d="M22 12A10 10 0 0 0 12 2v10z" /></React.Fragment>,
+                CheckSquare: <React.Fragment><polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></React.Fragment>,
+                Square: <React.Fragment><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /></React.Fragment>,
+                RefreshCcw: <React.Fragment><path d="M1 4v6h6" /><path d="M23 20v-6h-6" /><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" /></React.Fragment>,
+                BarChart3: <React.Fragment><path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" /></React.Fragment>,
+                Camera: <React.Fragment><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></React.Fragment>,
+                ScanText: <React.Fragment><path d="M7 21H5a2 2 0 0 1-2-2v-2" /><path d="M17 21h2a2 2 0 0 0 2-2v-2" /><path d="M7 3H5a2 2 0 0 0-2 2v2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M7 8h10" /><path d="M7 12h10" /><path d="M7 16h10" /></React.Fragment>,
+                Loader2: <React.Fragment><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" /></React.Fragment>,
+                ImageIcon: <React.Fragment><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></React.Fragment>,
+                FilePlus: <React.Fragment><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /><line x1="12" x2="12" y1="18" y2="12" /><line x1="9" x2="15" y1="15" y2="15" /></React.Fragment>,
+                Box: <React.Fragment><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></React.Fragment>,
+                Folder: <React.Fragment><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></React.Fragment>,
+                Cpu: <React.Fragment><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/><path d="M15 2v2"/><path d="M9 2v2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 20v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/></React.Fragment>,
+                Monitor: <React.Fragment><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></React.Fragment>,
+                SdCard: <React.Fragment><path d="M18 2H10L4 8v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/><path d="M14 6v4"/><path d="M10 6v4"/><path d="M7 6v4"/></React.Fragment>,
+                Share2: <React.Fragment><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></React.Fragment>,
+                FileText: <React.Fragment><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></React.Fragment>
+            };
+            return (
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width={size}
+                    height={size}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={strokeWidth}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={className}
+                >
+                    {icons[name] || <circle cx="12" cy="12" r="10" />}
+                </svg>
+            );
+        };
+
+        const DEFAULT_BACKUP_TYPES = [
+            { id: 'hard_disk', label: '硬碟', iconName: 'HardDrive', color: 'text-blue-600', totalGb: 1024 },
+            { id: 'onedrive', label: 'OneDrive', iconName: 'Cloud', color: 'text-sky-600', totalGb: 1024 },
+            { id: 'shared_album', label: '共享相簿', iconName: 'Users', color: 'text-indigo-600', totalGb: 200 },
+            { id: 'usb', label: 'USB', iconName: 'Usb', color: 'text-emerald-600', totalGb: 64 }
+        ];
+
+        // 擴充可用圖案列表，供設定頁面選擇
+        const EXTENDED_ICONS = ['HardDrive', 'Cloud', 'Users', 'Usb', 'Database', 'Archive', 'Server', 'Smartphone', 'Box', 'Folder', 'Cpu', 'Monitor', 'SdCard', 'Share2'];
+
+        function App() {
+            const [folders, setFolders] = useState([]);
+            const [manualOrder, setManualOrder] = useState([]); // folder ids in manual order
+            const [backupTypes, setBackupTypes] = useState([]);
+            const [viewMode, setViewMode] = useState('list'); // list, grid, matrix, settings, dashboard, photo_import, bulk_text
+            const [sortType, setSortType] = useState('manual');
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [editingFolder, setEditingFolder] = useState(null);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [selectedIds, setSelectedIds] = useState([]); 
+            const [isBulkMode, setIsBulkMode] = useState(false);
+
+            const [sizeUnit, setSizeUnit] = useState('GB');
+            const [isScanning, setIsScanning] = useState(false);
+            const [capturedImage, setCapturedImage] = useState(null);
+            const [ocrResults, setOcrResults] = useState([]);
+            const [selectedOcrNames, setSelectedOcrNames] = useState([]);
+            const videoRef = useRef(null);
+            const canvasRef = useRef(null);
+            const [bulkText, setBulkText] = useState("");
+            const [pendingPhotos, setPendingPhotos] = useState([]);
+            const photoInputRef = useRef(null);
+            const fileInputRef = useRef(null);
+            const [newTypeName, setNewTypeName] = useState('');
+            const [selectedIconName, setSelectedIconName] = useState('Database');
+
+            useEffect(() => {
+                const savedFolders = localStorage.getItem('pb_v4_folders');
+                const savedTypes = localStorage.getItem('pb_v4_types');
+                const savedManualOrder = localStorage.getItem('pb_v4_manual_order');
+                if (savedFolders) setFolders(JSON.parse(savedFolders));
+                else setFolders([{ id: Date.now(), name: '範例相集 2025', sizeGb: 2.5, backups: {} }]);
+                
+                if (savedTypes) setBackupTypes(JSON.parse(savedTypes));
+                else setBackupTypes(DEFAULT_BACKUP_TYPES);
+
+                if (savedManualOrder) {
+                    try {
+                        const parsed = JSON.parse(savedManualOrder);
+                        if (Array.isArray(parsed)) setManualOrder(parsed);
+                    } catch {}
+                }
+            }, []);
+
+            useEffect(() => {
+                localStorage.setItem('pb_v4_folders', JSON.stringify(folders));
+                localStorage.setItem('pb_v4_types', JSON.stringify(backupTypes));
+            }, [folders, backupTypes]);
+
+            useEffect(() => {
+                localStorage.setItem('pb_v4_manual_order', JSON.stringify(manualOrder));
+            }, [manualOrder]);
+
+            useEffect(() => {
+                if (!folders.length) {
+                    if (manualOrder.length) setManualOrder([]);
+                    return;
+                }
+                const folderIds = folders.map(f => f.id);
+                setManualOrder(prev => {
+                    const prevSet = new Set(prev);
+                    const kept = prev.filter(id => folderIds.includes(id));
+                    const newIds = folderIds.filter(id => !prevSet.has(id));
+                    if (newIds.length === 0 && kept.length === prev.length) return prev;
+                    return [...newIds, ...kept];
+                });
+            }, [folders]);
+
+            // --- 工具函式 ---
+            const formatSize = (gb) => {
+                if (gb < 1) {
+                    return `${(gb * 1024).toFixed(1)} MB`;
+                }
+                return `${gb.toFixed(2)} GB`;
+            };
+
+            const calculateHealth = (folder) => {
+                if (!folder.backups) return 0;
+                const backupList = Object.values(folder.backups).filter(b => b.active);
+                let score = backupList.length >= 3 ? 80 : backupList.length * 25;
+                const oneYearAgo = new Date();
+                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+                backupList.forEach(b => {
+                    if (b.date && new Date(b.date) < oneYearAgo) score -= 10;
+                });
+                return Math.max(0, Math.min(100, score));
+            };
+
+            const getLatestBackupTime = (folder) => {
+                if (!folder.backups) return 0;
+                const dates = Object.values(folder.backups).filter(b => b.active && b.date).map(b => new Date(b.date).getTime());
+                return dates.length > 0 ? Math.max(...dates) : 0;
+            };
+
+            const getUsedGb = (typeId) => folders.reduce((sum, f) => (f.backups?.[typeId]?.active ? sum + (parseFloat(f.sizeGb) || 0) : sum), 0);
+
+            const toggleBackupStatus = (folderId, typeId) => {
+                const today = new Date().toISOString().slice(0, 10);
+                setFolders(prev => prev.map(folder => {
+                    if (folder.id !== folderId) return folder;
+                    const prevBackup = folder.backups?.[typeId] || { active: false, date: "", note: "" };
+                    const nextActive = !prevBackup.active;
+                    return {
+                        ...folder,
+                        backups: {
+                            ...(folder.backups || {}),
+                            [typeId]: {
+                                ...prevBackup,
+                                active: nextActive,
+                                date: nextActive ? (prevBackup.date || today) : prevBackup.date
+                            }
+                        }
+                    };
+                }));
+            };
+
+            const moveItem = (id, direction, visibleIds) => {
+                const ids = Array.isArray(visibleIds) && visibleIds.length ? visibleIds : manualOrder;
+                const idx = ids.indexOf(id);
+                if (idx === -1) return;
+                const target = idx + direction;
+                if (target < 0 || target >= ids.length) return;
+                const otherId = ids[target];
+
+                setManualOrder(prev => {
+                    const iA = prev.indexOf(id);
+                    const iB = prev.indexOf(otherId);
+                    if (iA === -1 || iB === -1) return prev;
+                    const next = [...prev];
+                    [next[iA], next[iB]] = [next[iB], next[iA]];
+                    return next;
+                });
+            };
+
+            // --- 排序邏輯擴充 ---
+            const processedFolders = useMemo(() => {
+                const normalizedSearch = searchTerm.toLowerCase();
+                let result = [...folders].filter(f => f.name.toLowerCase().includes(normalizedSearch));
+                
+                switch (sortType) {
+                    case 'manual': {
+                        const byId = new Map(folders.map(f => [f.id, f]));
+                        const filteredIdSet = new Set(result.map(f => f.id));
+                        const ordered = manualOrder
+                            .filter(id => filteredIdSet.has(id))
+                            .map(id => byId.get(id))
+                            .filter(Boolean);
+                        const orderedSet = new Set(ordered.map(f => f.id));
+                        const rest = result.filter(f => !orderedSet.has(f.id));
+                        return [...ordered, ...rest];
+                    }
+                    case 'name-asc': result.sort((a,b) => a.name.localeCompare(b.name, 'zh-Hant')); break;
+                    case 'name-desc': result.sort((a,b) => b.name.localeCompare(a.name, 'zh-Hant')); break;
+                    case 'health-desc': result.sort((a,b) => calculateHealth(b) - calculateHealth(a)); break;
+                    case 'count-desc': result.sort((a,b) => Object.values(b.backups || {}).filter(x=>x.active).length - Object.values(a.backups || {}).filter(x=>x.active).length); break;
+                    case 'size-desc': result.sort((a,b) => (b.sizeGb || 0) - (a.sizeGb || 0)); break;
+                    case 'size-asc': result.sort((a,b) => (a.sizeGb || 0) - (b.sizeGb || 0)); break;
+                    case 'date-desc': result.sort((a,b) => getLatestBackupTime(b) - getLatestBackupTime(a)); break;
+                    case 'date-asc': result.sort((a,b) => {
+                        const tA = getLatestBackupTime(a), tB = getLatestBackupTime(b);
+                        if (tA === 0) return 1; if (tB === 0) return -1;
+                        return tA - tB;
+                    }); break;
+                    default:
+                        break;
+                }
+                return result;
+            }, [folders, manualOrder, searchTerm, sortType]);
+
+            const visibleFolderIds = useMemo(() => processedFolders.map(f => f.id), [processedFolders]);
+
+            // --- 介面操作 ---
+            const toggleSelection = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+            const handleBulkImport = () => {
+                const names = bulkText.split('\n').map(n => n.trim()).filter(n => n !== "");
+                if (names.length === 0) return;
+                const newItems = names.map(name => ({ id: Date.now() + Math.random(), name, sizeGb: 0, backups: {} }));
+                setFolders([...newItems, ...folders]);
+                setBulkText("");
+                setViewMode('list');
+            };
+
+            const confirmPhotoImport = () => {
+                const news = pendingPhotos.filter(p => p.selected).map(p => ({ id: Date.now() + Math.random(), name: p.name, sizeGb: parseFloat(p.sizeGb), backups: {} }));
+                setFolders([...news, ...folders]);
+                setViewMode('list');
+            };
+
+            const saveFolder = (e) => {
+                e.preventDefault();
+                const fd = new FormData(e.target);
+                const sizeInput = parseFloat(fd.get('sizeInput')) || 0;
+                const unit = fd.get('sizeUnit');
+                const sizeGb = unit === 'MB' ? sizeInput / 1024 : sizeInput;
+
+                const obj = { id: editingFolder ? editingFolder.id : Date.now(), name: fd.get('name'), sizeGb, backups: {} };
+                backupTypes.forEach(t => {
+                    obj.backups[t.id] = {
+                        active: fd.get(`${t.id}_active`) === 'on',
+                        date: fd.get(`${t.id}_date`),
+                        note: fd.get(`${t.id}_note`)
+                    };
+                });
+                if (editingFolder) setFolders(folders.map(f => f.id === obj.id ? obj : f));
+                else setFolders([obj, ...folders]);
+                setIsModalOpen(false); setEditingFolder(null);
+            };
+
+            const exportData = () => {
+                const blob = new Blob([JSON.stringify({folders, backupTypes}, null, 2)], {type: 'application/json'});
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+                a.download = `photo_backup_v4_pro.json`; a.click();
+            };
+
+            return (
+                <div className="min-h-screen min-h-[100dvh] pb-24 pb-[calc(6rem+env(safe-area-inset-bottom))] max-w-4xl mx-auto">
+                    {/* Header */}
+                    <header className="bg-white/80 glass-morphism border-b sticky top-0 z-40 px-4 h-16 flex items-center justify-between shadow-sm rounded-b-3xl">
+                        <div className="flex items-center gap-2">
+                            {!['list','grid','matrix'].includes(viewMode) && (
+                                <button onClick={() => setViewMode('list')} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors">
+                                    <Icon name="ChevronLeft" size={24} />
+                                </button>
+                            )}
+                            <h1 className="text-xl font-black text-blue-600 tracking-tighter text-nowrap">PHOTO BACKUP PRO</h1>
+                        </div>
+                        <div className="flex items-center gap-1 sm:gap-2">
+                            <button onClick={() => setViewMode('bulk_text')} className={`p-2 rounded-xl ${viewMode === 'bulk_text' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-blue-600'}`} title="文字批量匯入"><Icon name="FileText" size={20} /></button>
+                            <button onClick={() => photoInputRef.current.click()} className="p-2 text-slate-400 hover:text-blue-600" title="匯入相片"><Icon name="ImageIcon" size={20} /></button>
+                            <input type="file" ref={photoInputRef} onChange={(e) => {
+                                const files = Array.from(e.target.files);
+                                setPendingPhotos(files.map(f => ({
+                                    id: Math.random(), name: f.name, sizeGb: (f.size / (1024 ** 3)).toFixed(4),
+                                    date: new Date(f.lastModified).toISOString().split('T')[0], selected: true
+                                })));
+                                setViewMode('photo_import');
+                            }} multiple accept="image/*" className="hidden" />
+                            
+                            <button onClick={() => setViewMode('dashboard')} className={`p-2 rounded-xl ${viewMode === 'dashboard' ? 'bg-blue-600 text-white' : 'text-slate-400'}`} title="統計"><Icon name="PieChart" size={20} /></button>
+                            <button onClick={() => setViewMode('settings')} className={`p-2 rounded-xl ${viewMode === 'settings' ? 'bg-blue-600 text-white' : 'text-slate-400'}`} title="設定"><Icon name="Settings" size={20} /></button>
+                            
+                            <div className="w-px h-6 bg-slate-200 mx-1 hidden sm:block" />
+                            <button onClick={() => { setEditingFolder(null); setIsModalOpen(true); }} className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-1 shadow-lg shadow-blue-100 active:scale-95 transition-all">
+                                <Icon name="Plus" size={20} /> <span className="hidden sm:inline">新增</span>
+                            </button>
+                        </div>
+                    </header>
+
+                    {/* 批次操作條 */}
+                    {selectedIds.length > 0 && (
+                        <div className="fixed bottom-6 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-50 max-w-md mx-auto bg-slate-900 text-white p-4 rounded-3xl shadow-2xl flex items-center justify-between animate-in slide-in-from-bottom duration-300">
+                            <span className="text-xs font-bold bg-blue-500 px-3 py-1 rounded-full whitespace-nowrap">{selectedIds.length} 個已選</span>
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar ml-4">
+                                {backupTypes.map(t => <button key={t.id} onClick={() => {
+                                    const today = new Date().toISOString().split('T')[0];
+                                    setFolders(folders.map(f => selectedIds.includes(f.id) ? { ...f, backups: { ...f.backups, [t.id]: { active: true, date: today, note: '批次更新' } } } : f));
+                                    setSelectedIds([]);
+                                }} className="whitespace-nowrap bg-white/10 hover:bg-white/20 p-2 rounded-lg text-[10px] font-bold">{t.label}</button>)}
+                                <button onClick={() => { if(confirm('刪除已選項目？')) { setFolders(folders.filter(f => !selectedIds.includes(f.id))); setSelectedIds([]); }}} className="bg-rose-500 text-white p-2 rounded-lg shrink-0 ml-2"><Icon name="Trash2" size={16}/></button>
+                            </div>
+                        </div>
+                    )}
+
+                    <main className="p-4">
+                        {viewMode === 'bulk_text' ? (
+                            <div className="bg-white p-8 rounded-[3rem] shadow-sm space-y-6 animate-in fade-in">
+                                <div className="flex items-center gap-3 text-blue-600"><Icon name="FileText" size={24} /><h2 className="text-2xl font-black">批量文字匯入</h2></div>
+                                <textarea value={bulkText} onChange={(e) => setBulkText(e.target.value)} placeholder="每一行一個名稱..." className="w-full h-64 p-5 bg-slate-50 border-none rounded-3xl outline-none focus:ring-4 ring-blue-50 font-medium resize-none" />
+                                <div className="flex gap-3 pt-2">
+                                    <button onClick={() => setViewMode('list')} className="flex-1 bg-slate-100 py-4 rounded-2xl font-bold text-slate-500">取消</button>
+                                    <button onClick={handleBulkImport} className="flex-[2] bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg">正式匯入</button>
+                                </div>
+                            </div>
+                        ) : viewMode === 'photo_import' ? (
+                            <div className="bg-white p-8 rounded-[3rem] shadow-sm space-y-6 animate-in fade-in">
+                                <h2 className="text-2xl font-black flex items-center gap-2"><Icon name="FilePlus" className="text-blue-600"/>確認匯入檔案</h2>
+                                <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-2">
+                                    {pendingPhotos.map(p => (
+                                        <label key={p.id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border-2 border-transparent hover:border-blue-100 cursor-pointer">
+                                            <input type="checkbox" className="w-6 h-6 rounded text-blue-600" checked={p.selected} onChange={() => setPendingPhotos(pendingPhotos.map(x=>x.id===p.id?{...x,selected:!x.selected}:x))} />
+                                            <div className="flex-1 truncate font-bold text-sm">{p.name} <span className="block text-[10px] text-slate-400">{formatSize(parseFloat(p.sizeGb))} • {p.date}</span></div>
+                                        </label>
+                                    ))}
+                                </div>
+                                <div className="flex gap-3">
+                                    <button onClick={() => setViewMode('list')} className="flex-1 bg-slate-100 py-4 rounded-2xl font-bold">取消</button>
+                                    <button onClick={confirmPhotoImport} className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg">確認</button>
+                                </div>
+                            </div>
+                        ) : viewMode === 'dashboard' ? (
+                            <div className="space-y-6 animate-in fade-in">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                                        <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-blue-600"><Icon name="BarChart3" size={20}/>媒介容量狀態</h2>
+                                        <div className="space-y-5">
+                                            {backupTypes.map(t => {
+                                                const used = getUsedGb(t.id);
+                                                const per = Math.min(100, (used / (t.totalGb || 1)) * 100);
+                                                return (
+                                                    <div key={t.id} className="space-y-1">
+                                                        <div className="flex justify-between text-xs font-bold"><span>{t.label}</span><span className="text-slate-400 font-medium">{formatSize(used)} / {t.totalGb} GB</span></div>
+                                                        <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                                                            <div className={`h-full transition-all duration-1000 ${per > 90 ? 'bg-rose-500' : 'bg-blue-500'}`} style={{width: `${per}%`}} />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                    <div className="bg-white p-6 rounded-3xl shadow-sm flex flex-col items-center justify-center border border-slate-100">
+                                        <div className="p-4 bg-emerald-50 rounded-full text-emerald-500 mb-2"><Icon name="ShieldCheck" size={40} /></div>
+                                        <div className="text-5xl font-black text-slate-800">{folders.length ? Math.round(folders.reduce((s,f)=>s+calculateHealth(f), 0) / folders.length) : 0}</div>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2 text-center">平均數據健康評分</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : viewMode === 'settings' ? (
+                            <div className="space-y-6 animate-in slide-in-from-right duration-300">
+                                <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 space-y-8">
+                                    <h2 className="text-2xl font-black">系統設定</h2>
+                                    <div className="space-y-4">
+                                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">管理備份目的地</h3>
+                                        {backupTypes.map(type => (
+                                            <div key={type.id} className="bg-slate-50 p-5 rounded-3xl flex items-center justify-between gap-4">
+                                                <div className="flex items-center gap-3 font-bold">
+                                                    <div className="p-2 bg-white rounded-xl shadow-sm text-blue-600"><Icon name={type.iconName} size={20} /></div>
+                                                    {type.label}
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <input type="number" value={type.totalGb} onChange={e => setBackupTypes(backupTypes.map(t=>t.id===type.id?{...t,totalGb:parseInt(e.target.value)||0}:t))} className="bg-white border-none rounded-xl px-3 py-2 text-right w-24 font-bold text-sm outline-none focus:ring-2 ring-blue-100 shadow-sm" />
+                                                    <span className="text-xs font-bold text-slate-400">GB</span>
+                                                    <button onClick={() => setBackupTypes(backupTypes.filter(t => t.id !== type.id))} className="text-slate-300 hover:text-rose-500 p-2"><Icon name="Trash2" size={20}/></button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="mt-8 pt-8 border-t border-slate-50 space-y-4">
+                                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">新增儲存媒介</h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <input value={newTypeName} onChange={e=>setNewTypeName(e.target.value)} placeholder="空間名稱..." className="bg-slate-50 border-none rounded-2xl p-4 outline-none focus:ring-2 ring-blue-100" />
+                                            <div className="flex flex-col gap-4">
+                                                <div className="flex flex-wrap gap-2 p-2 bg-slate-50 rounded-2xl">
+                                                    {EXTENDED_ICONS.map(icon => (
+                                                        <button key={icon} onClick={() => setSelectedIconName(icon)} className={`p-2 rounded-xl border-2 transition-all ${selectedIconName === icon ? 'border-blue-600 bg-white text-blue-600' : 'border-transparent text-slate-400'}`}><Icon name={icon} size={20}/></button>
+                                                    ))}
+                                                </div>
+                                                <button onClick={() => { if(!newTypeName) return; setBackupTypes([...backupTypes, { id: `custom_${Date.now()}`, label: newTypeName, iconName: selectedIconName, color: 'text-slate-600', totalGb: 100 }]); setNewTypeName(''); }} className="bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-100">新增媒介</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="mt-8 flex gap-4 pt-8 border-t border-slate-50">
+                                        <button onClick={exportData} className="flex-1 p-4 bg-slate-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg"><Icon name="Download" size={20}/>匯出 JSON</button>
+                                        <button onClick={() => {
+                                            const input = document.createElement('input');
+                                            input.type = 'file'; input.accept = '.json';
+                                            input.onchange = (e) => {
+                                                const reader = new FileReader();
+                                                reader.onload = (ev) => {
+                                                    const json = JSON.parse(ev.target.result);
+                                                    if (json.folders) { setFolders(json.folders); setBackupTypes(json.backupTypes); alert("匯入成功"); }
+                                                };
+                                                reader.readAsText(e.target.files[0]);
+                                            };
+                                            input.click();
+                                        }} className="flex-1 p-4 bg-slate-100 text-slate-600 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors"><Icon name="Upload" size={20}/>匯入 JSON</button>
+                                    </div>
+                                </section>
+                            </div>
+                        ) : (
+                            /* 主列表與搜尋 */
+                            <>
+                                <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                                    <div className="relative flex-1">
+                                        <Icon name="Search" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={22}/>
+                                        <input type="text" placeholder="搜尋相片專案..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className="w-full bg-white border-none rounded-3xl py-4 pl-12 shadow-sm outline-none focus:ring-4 ring-blue-50 transition-all font-medium" />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <div className="bg-white rounded-2xl shadow-sm p-1 flex items-center">
+                                            <button onClick={() => setViewMode('list')} className={`p-2 rounded-xl transition-colors ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-blue-600 hover:bg-slate-50'}`} title="清單檢視"><Icon name="List" size={18} /></button>
+                                            <button onClick={() => setViewMode('grid')} className={`p-2 rounded-xl transition-colors ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-blue-600 hover:bg-slate-50'}`} title="卡片檢視"><Icon name="LayoutGrid" size={18} /></button>
+                                            <button onClick={() => setViewMode('matrix')} className={`p-2 rounded-xl transition-colors ${viewMode === 'matrix' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-blue-600 hover:bg-slate-50'}`} title="矩陣檢視"><Icon name="Table2" size={18} /></button>
+                                        </div>
+                                        <select value={sortType} onChange={e=>setSortType(e.target.value)} className="bg-white border-none rounded-2xl px-4 py-3 shadow-sm font-bold text-sm text-slate-600 outline-none">
+                                            <optgroup label="排序">
+                                                <option value="manual">手動排序</option>
+                                                <option value="name-asc">名稱 A-Z</option>
+                                                <option value="name-desc">名稱 Z-A</option>
+                                                <option value="health-desc">健康度</option>
+                                                <option value="count-desc">備份完整度</option>
+                                                <option value="size-desc">大小 (大→小)</option>
+                                                <option value="size-asc">大小 (小→大)</option>
+                                                <option value="date-desc">日期 (新→舊)</option>
+                                                <option value="date-asc">日期 (舊→新)</option>
+                                            </optgroup>
+                                        </select>
+                                        <button onClick={() => setIsBulkMode(!isBulkMode)} className={`px-4 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all ${isBulkMode ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 shadow-sm'}`}>
+                                            {isBulkMode ? <Icon name="CheckSquare" size={18}/> : <Icon name="Square" size={18}/>} 批次
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {viewMode === 'matrix' ? (
+                                    <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full text-sm">
+                                                <thead className="bg-slate-50 text-slate-400 uppercase tracking-widest text-[10px] font-black">
+                                                    <tr>
+                                                        <th className="text-left p-4 sticky left-0 bg-slate-50 z-10 min-w-[220px]">相集</th>
+                                                        {backupTypes.map(t => (
+                                                            <th key={t.id} className="text-left p-4 whitespace-nowrap min-w-[140px]">
+                                                                <span className="inline-flex items-center gap-2">
+                                                                    <Icon name={t.iconName} size={14} className="text-blue-600" strokeWidth={2.5} />
+                                                                    {t.label}
+                                                                </span>
+                                                            </th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {processedFolders.map((folder, idx) => {
+                                                        const h = calculateHealth(folder);
+                                                        const isSel = selectedIds.includes(folder.id);
+                                                        return (
+                                                            <tr key={folder.id} onClick={() => {
+                                                                if (isBulkMode) toggleSelection(folder.id);
+                                                                else { setEditingFolder(folder); setSizeUnit(folder.sizeGb < 1 ? 'MB' : 'GB'); setIsModalOpen(true); }
+                                                            }} className={`border-t border-slate-100 transition-colors ${isBulkMode ? 'cursor-pointer' : 'cursor-pointer hover:bg-slate-50'} ${isSel ? 'bg-blue-50' : ''}`}>
+                                                                <td className={`p-4 sticky left-0 z-10 ${isSel ? 'bg-blue-50' : 'bg-white'}`}>
+                                                                    <div className="flex items-start gap-3">
+                                                                        {isBulkMode && (
+                                                                            <div className={`pt-1 ${isSel ? 'text-blue-600' : 'text-slate-200'}`}>{isSel ? <Icon name="CheckSquare" size={22}/> : <Icon name="Square" size={22}/>}</div>
+                                                                        )}
+                                                                        {!isBulkMode && (
+                                                                            <div className="flex flex-col text-slate-200 shrink-0 pt-0.5">
+                                                                                <button onClick={(e) => {e.stopPropagation(); moveItem(folder.id, -1, visibleFolderIds); setSortType('manual');}} className="p-1 hover:text-blue-400 disabled:opacity-20" disabled={idx === 0} title="上移"><Icon name="ChevronUp" size={20}/></button>
+                                                                                <button onClick={(e) => {e.stopPropagation(); moveItem(folder.id, 1, visibleFolderIds); setSortType('manual');}} className="p-1 hover:text-blue-400 disabled:opacity-20" disabled={idx === processedFolders.length - 1} title="下移"><Icon name="ChevronDown" size={20}/></button>
+                                                                            </div>
+                                                                        )}
+                                                                        <div className="min-w-0">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className="font-black text-slate-800 truncate">{folder.name}</div>
+                                                                                <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full font-black uppercase tracking-widest shrink-0">{formatSize(folder.sizeGb)}</span>
+                                                                            </div>
+                                                                            <div className={`mt-2 inline-flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase border ${h >= 80 ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : h >= 40 ? 'bg-amber-50 border-amber-100 text-amber-600' : 'bg-rose-50 border-rose-100 text-rose-600'}`}>
+                                                                                <Icon name="ShieldCheck" size={12}/> 健康度 {h}%
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                                {backupTypes.map(t => {
+                                                                    const isDone = folder.backups?.[t.id]?.active;
+                                                                    const content = (
+                                                                        <span className={`inline-flex items-center gap-2 font-bold ${isDone ? 'text-blue-600' : 'text-slate-200'}`}>
+                                                                            {isDone ? <Icon name="CheckCircle2" size={18} /> : <Icon name="Circle" size={18} />}
+                                                                            <span className="text-xs">{isDone ? '已備份' : '未備份'}</span>
+                                                                        </span>
+                                                                    );
+                                                                    return (
+                                                                        <td key={t.id} className="p-4">
+                                                                            {isBulkMode ? (
+                                                                                content
+                                                                            ) : (
+                                                                                <button onClick={(e) => { e.stopPropagation(); toggleBackupStatus(folder.id, t.id); }} className="w-full text-left p-3 rounded-2xl hover:bg-slate-50 transition-colors">
+                                                                                    {content}
+                                                                                    {isDone && folder.backups?.[t.id]?.date && <div className="mt-1 text-[10px] font-bold text-slate-400">{folder.backups?.[t.id]?.date}</div>}
+                                                                                </button>
+                                                                            )}
+                                                                        </td>
+                                                                    );
+                                                                })}
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                ) : viewMode === 'grid' ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {processedFolders.map((folder, idx) => {
+                                            const h = calculateHealth(folder);
+                                            const isSel = selectedIds.includes(folder.id);
+                                            return (
+                                                <div key={folder.id} onClick={() => isBulkMode && toggleSelection(folder.id)} className={`bg-white rounded-[2rem] shadow-sm border p-5 transition-all ${isBulkMode ? 'cursor-pointer active:scale-95' : 'hover:shadow-md'} ${isSel ? 'border-blue-500 ring-4 ring-blue-50' : 'border-slate-100'}`}>
+                                                    <div className="flex items-start gap-4">
+                                                        {isBulkMode && (
+                                                            <div onClick={() => toggleSelection(folder.id)} className={`p-2 rounded-xl ${isSel ? 'text-blue-600' : 'text-slate-200'}`}>{isSel ? <Icon name="CheckSquare" size={28}/> : <Icon name="Square" size={28}/>}</div>
+                                                        )}
+                                                        {!isBulkMode && (
+                                                            <div className="flex flex-col text-slate-200 shrink-0 pt-1">
+                                                                <button onClick={(e) => {e.stopPropagation(); moveItem(folder.id, -1, visibleFolderIds); setSortType('manual');}} className="p-1 hover:text-blue-400 disabled:opacity-20" disabled={idx === 0} title="上移"><Icon name="ChevronUp" size={22}/></button>
+                                                                <button onClick={(e) => {e.stopPropagation(); moveItem(folder.id, 1, visibleFolderIds); setSortType('manual');}} className="p-1 hover:text-blue-400 disabled:opacity-20" disabled={idx === processedFolders.length - 1} title="下移"><Icon name="ChevronDown" size={22}/></button>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-start justify-between gap-3">
+                                                                <div className="min-w-0">
+                                                                    <h3 className="font-black text-slate-800 text-lg truncate">{folder.name}</h3>
+                                                                    <div className="flex flex-wrap gap-2 mt-2">
+                                                                        <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full font-black uppercase tracking-widest shrink-0">{formatSize(folder.sizeGb)}</span>
+                                                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase border flex items-center gap-1 shrink-0 ${h >= 80 ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : h >= 40 ? 'bg-amber-50 border-amber-100 text-amber-600' : 'bg-rose-50 border-rose-100 text-rose-600'}`}><Icon name="ShieldCheck" size={12}/> 健康度 {h}%</span>
+                                                                    </div>
+                                                                </div>
+                                                                {!isBulkMode && (
+                                                                    <button onClick={() => {
+                                                                        setEditingFolder(folder);
+                                                                        setSizeUnit(folder.sizeGb < 1 ? 'MB' : 'GB');
+                                                                        setIsModalOpen(true);
+                                                                    }} className="p-3 bg-slate-50 text-slate-300 hover:text-blue-600 rounded-2xl transition-all hover:bg-blue-50 shrink-0" title="編輯"><Icon name="Edit2" size={18}/></button>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex flex-wrap gap-2 mt-4">
+                                                                {backupTypes.map(t => {
+                                                                    const isDone = folder.backups?.[t.id]?.active;
+                                                                    return (
+                                                                        <div key={t.id} className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-bold border transition-all shrink-0 ${isDone ? 'bg-blue-50 border-blue-100 text-blue-600 shadow-sm' : 'bg-gray-50 border-gray-100 text-gray-200 opacity-40'}`}>
+                                                                            <Icon name={t.iconName} size={12} strokeWidth={2.5} />
+                                                                            <span>{t.label}</span>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {processedFolders.map((folder, idx) => {
+                                            const h = calculateHealth(folder);
+                                            const isSel = selectedIds.includes(folder.id);
+                                            return (
+                                                <div key={folder.id} onClick={() => isBulkMode && toggleSelection(folder.id)} className={`bg-white rounded-[2rem] shadow-sm border p-4 flex items-center gap-4 transition-all ${isBulkMode ? 'cursor-pointer active:scale-95' : ''} ${isSel ? 'border-blue-500 ring-4 ring-blue-50' : 'border-slate-100 hover:shadow-md'}`}>
+                                                    {isBulkMode ? (
+                                                        <div onClick={() => toggleSelection(folder.id)} className={`p-2 rounded-xl ${isSel ? 'text-blue-600' : 'text-slate-200'}`}>{isSel ? <Icon name="CheckSquare" size={28}/> : <Icon name="Square" size={28}/>}</div>
+                                                    ) : (
+                                                        <div className="flex flex-col text-slate-200 shrink-0">
+                                                            <button onClick={(e) => {e.stopPropagation(); moveItem(folder.id, -1, visibleFolderIds); setSortType('manual');}} className="p-1 hover:text-blue-400 disabled:opacity-20" disabled={idx === 0} title="上移"><Icon name="ChevronUp" size={24}/></button>
+                                                            <button onClick={(e) => {e.stopPropagation(); moveItem(folder.id, 1, visibleFolderIds); setSortType('manual');}} className="p-1 hover:text-blue-400 disabled:opacity-20" disabled={idx === processedFolders.length - 1} title="下移"><Icon name="ChevronDown" size={24}/></button>
+                                                        </div>
+                                                    )}
+                                                    <div className="flex-1 min-w-0" onClick={() => isBulkMode && toggleSelection(folder.id)}>
+                                                        <div className="flex items-center gap-2">
+                                                            <h3 className="font-bold text-slate-800 text-lg truncate">{folder.name}</h3>
+                                                            <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full font-black uppercase tracking-widest shrink-0">{formatSize(folder.sizeGb)}</span>
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-2 mt-3">
+                                                            <div className={`px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase border flex items-center gap-1 shrink-0 ${h >= 80 ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : h >= 40 ? 'bg-amber-50 border-amber-100 text-amber-600' : 'bg-rose-50 border-rose-100 text-rose-600'}`}>
+                                                                <Icon name="ShieldCheck" size={12}/> 健康度 {h}%
+                                                            </div>
+                                                            {backupTypes.map(t => {
+                                                                const isDone = folder.backups?.[t.id]?.active;
+                                                                return (
+                                                                    <div key={t.id} className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-bold border transition-all shrink-0 ${isDone ? 'bg-blue-50 border-blue-100 text-blue-600 shadow-sm' : 'bg-gray-50 border-gray-100 text-gray-200 opacity-40'}`}>
+                                                                        <Icon name={t.iconName} size={12} strokeWidth={2.5} />
+                                                                        <span>{t.label}</span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                    {!isBulkMode && <button onClick={() => {
+                                                        setEditingFolder(folder);
+                                                        setSizeUnit(folder.sizeGb < 1 ? 'MB' : 'GB');
+                                                        setIsModalOpen(true);
+                                                    }} className="p-4 bg-slate-50 text-slate-300 hover:text-blue-600 rounded-2xl transition-all hover:bg-blue-50 shrink-0"><Icon name="Edit2" size={20}/></button>}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                {processedFolders.length === 0 && <div className="text-center py-24 text-slate-300 font-bold uppercase tracking-widest"><Icon name="Search" className="mx-auto mb-4 opacity-10" size={64}/>找不到檔案</div>}
+                            </>
+                        )}
+                    </main>
+
+                    {/* 編輯彈窗 */}
+                    {isModalOpen && (
+                        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
+                            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+                            <form onSubmit={saveFolder} className="relative bg-white w-full max-w-2xl rounded-t-[3.5rem] sm:rounded-[3rem] p-8 shadow-2xl max-h-[92vh] overflow-y-auto animate-in slide-in-from-bottom no-scrollbar">
+                                <div className="flex justify-between items-center mb-8 px-2">
+                                    <h2 className="text-2xl font-black text-slate-800 leading-tight">{editingFolder ? '修改相集狀態' : '建立全新相集'}</h2>
+                                    <button type="button" onClick={() => setIsModalOpen(false)} className="p-3 bg-slate-100 text-slate-400 rounded-full hover:bg-slate-200 transition-colors"><Icon name="X" size={24}/></button>
+                                </div>
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 px-2">
+                                        <div className="sm:col-span-2 space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">檔案集名稱</label>
+                                            <input name="name" defaultValue={editingFolder?.name} required placeholder="項目名稱..." className="w-full bg-slate-50 border-none rounded-2xl p-5 outline-none focus:ring-4 ring-blue-50 transition-all font-bold text-xl" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">數值</label>
+                                            <input 
+                                                name="sizeInput" 
+                                                type="number" 
+                                                step="0.0001" 
+                                                defaultValue={editingFolder ? (sizeUnit === 'MB' ? (editingFolder.sizeGb * 1024).toFixed(2) : editingFolder.sizeGb) : ""} 
+                                                placeholder="0.0" 
+                                                className="w-full bg-slate-50 border-none rounded-2xl p-5 outline-none focus:ring-4 ring-blue-50 font-black text-lg text-center" 
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">單位</label>
+                                            <select 
+                                                name="sizeUnit" 
+                                                value={sizeUnit} 
+                                                onChange={(e) => setSizeUnit(e.target.value)}
+                                                className="w-full bg-slate-50 border-none rounded-2xl p-5 outline-none focus:ring-4 ring-blue-50 font-black text-lg"
+                                            >
+                                                <option value="GB">GB</option>
+                                                <option value="MB">MB</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4 px-2 text-sm font-bold">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">備份狀態詳情</label>
+                                        <div className="space-y-3">
+                                            {backupTypes.map(type => {
+                                                const isActive = editingFolder?.backups?.[type.id]?.active;
+                                                return (
+                                                    <div key={type.id} className={`p-5 rounded-[2.5rem] border transition-all ${isActive ? 'bg-blue-50/50 border-blue-100' : 'bg-slate-50 border-transparent opacity-80'}`}>
+                                                        <div className="flex items-center gap-4">
+                                                            <input type="checkbox" name={`${type.id}_active`} defaultChecked={isActive} className="w-6 h-6 rounded-lg text-blue-600 focus:ring-blue-500 border-slate-300" />
+                                                            <div className="flex items-center gap-2 font-bold text-slate-700">
+                                                                <Icon name={type.iconName} size={20} className="text-blue-600" />
+                                                                {type.label}
+                                                            </div>
+                                                            <input type="date" name={`${type.id}_date`} defaultValue={editingFolder?.backups?.[type.id]?.date || new Date().toISOString().slice(0,10)} className="ml-auto text-xs bg-white px-4 py-2 rounded-2xl font-bold border-none shadow-sm outline-none" />
+                                                        </div>
+                                                        <input name={`${type.id}_note`} defaultValue={editingFolder?.backups?.[type.id]?.note} placeholder="具體備註 (如：硬碟 A、共享密碼、存放在櫃子)..." className="w-full mt-3 bg-white/60 p-4 rounded-2xl text-xs border-none outline-none focus:bg-white transition-colors" />
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                    <button type="submit" className="w-full bg-blue-600 text-white py-6 rounded-[2.5rem] font-black text-xl shadow-2xl shadow-blue-200 active:scale-95 transition-all mt-4 uppercase tracking-widest">儲存紀錄</button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
