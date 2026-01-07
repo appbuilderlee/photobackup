@@ -131,6 +131,7 @@
             const [searchTerm, setSearchTerm] = useState('');
             const [selectedIds, setSelectedIds] = useState([]); 
             const [isBulkMode, setIsBulkMode] = useState(false);
+            const [expandedFolderIds, setExpandedFolderIds] = useState([]);
 
             const [sizeUnit, setSizeUnit] = useState('GB');
             const [isScanning, setIsScanning] = useState(false);
@@ -214,6 +215,32 @@
                 return dates.length > 0 ? Math.max(...dates) : 0;
             };
 
+            const MobileBackupDetails = ({ folder }) => (
+                <div className="mt-4 bg-slate-50 rounded-2xl p-3 space-y-2 sm:hidden">
+                    {backupTypes.map(t => {
+                        const b = folder.backups?.[t.id] || {};
+                        const isDone = !!b.active;
+                        return (
+                            <div key={t.id} className={`p-3 rounded-2xl flex items-start justify-between gap-3 ${isDone ? 'bg-white' : 'bg-white/60 opacity-80'}`}>
+                                <div className="flex items-start gap-3 min-w-0">
+                                    <div className={`p-2 rounded-xl ${isDone ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>
+                                        <Icon name={t.iconName} size={18} strokeWidth={2.5} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="font-black text-slate-700 truncate">{t.label}</div>
+                                        <div className="text-[11px] font-bold text-slate-400">{isDone ? (b.date || '已備份') : '未備份'}</div>
+                                        {b.note && <div className="text-[11px] text-slate-500 mt-1 break-words">{b.note}</div>}
+                                    </div>
+                                </div>
+                                <div className={`text-[11px] font-black px-2.5 py-1 rounded-full shrink-0 ${isDone ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-500'}`}>
+                                    {isDone ? '已備份' : '未備份'}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+
             const getUsedGb = (typeId) => folders.reduce((sum, f) => (f.backups?.[typeId]?.active ? sum + (parseFloat(f.sizeGb) || 0) : sum), 0);
 
             const toggleBackupStatus = (folderId, typeId) => {
@@ -293,6 +320,7 @@
 
             // --- 介面操作 ---
             const toggleSelection = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+            const toggleExpanded = (id) => setExpandedFolderIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
             const handleBulkImport = () => {
                 const names = bulkText.split('\n').map(n => n.trim()).filter(n => n !== "");
@@ -609,6 +637,8 @@
                                         {processedFolders.map((folder, idx) => {
                                             const h = calculateHealth(folder);
                                             const isSel = selectedIds.includes(folder.id);
+                                            const isExpanded = expandedFolderIds.includes(folder.id);
+                                            const doneCount = backupTypes.filter(t => folder.backups?.[t.id]?.active).length;
                                             return (
                                                 <div key={folder.id} onClick={() => isBulkMode && toggleSelection(folder.id)} className={`bg-white rounded-[2rem] shadow-sm border p-5 transition-all ${isBulkMode ? 'cursor-pointer active:scale-95' : 'hover:shadow-md'} ${isSel ? 'border-blue-500 ring-4 ring-blue-50' : 'border-slate-100'}`}>
                                                     <div className="flex items-start gap-4">
@@ -639,16 +669,28 @@
                                                                 )}
                                                             </div>
                                                             <div className="flex flex-wrap gap-2 mt-4">
+                                                                <div className="sm:hidden flex items-center gap-2">
+                                                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-3 py-1 rounded-full font-black uppercase tracking-widest">{doneCount}/{backupTypes.length} 已備份</span>
+                                                                    {!isBulkMode && (
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); toggleExpanded(folder.id); }}
+                                                                            className="text-[11px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full inline-flex items-center gap-1"
+                                                                        >
+                                                                            {isExpanded ? '收起' : '查看'} <Icon name={isExpanded ? 'ChevronUp' : 'ChevronDown'} size={16} />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
                                                                 {backupTypes.map(t => {
                                                                     const isDone = folder.backups?.[t.id]?.active;
                                                                     return (
-                                                                        <div key={t.id} className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-bold border transition-all shrink-0 ${isDone ? 'bg-blue-50 border-blue-100 text-blue-600 shadow-sm' : 'bg-gray-50 border-gray-100 text-gray-200 opacity-40'}`}>
+                                                                        <div key={t.id} className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-bold border transition-all shrink-0 ${isDone ? 'bg-blue-50 border-blue-100 text-blue-600 shadow-sm' : 'bg-gray-50 border-gray-100 text-gray-200 opacity-40'}`}>
                                                                             <Icon name={t.iconName} size={12} strokeWidth={2.5} />
                                                                             <span>{t.label}</span>
                                                                         </div>
                                                                     );
                                                                 })}
                                                             </div>
+                                                            {!isBulkMode && isExpanded && <MobileBackupDetails folder={folder} />}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -660,6 +702,8 @@
                                         {processedFolders.map((folder, idx) => {
                                             const h = calculateHealth(folder);
                                             const isSel = selectedIds.includes(folder.id);
+                                            const isExpanded = expandedFolderIds.includes(folder.id);
+                                            const doneCount = backupTypes.filter(t => folder.backups?.[t.id]?.active).length;
                                             return (
                                                 <div key={folder.id} onClick={() => isBulkMode && toggleSelection(folder.id)} className={`bg-white rounded-[2rem] shadow-sm border p-4 flex items-center gap-4 transition-all ${isBulkMode ? 'cursor-pointer active:scale-95' : ''} ${isSel ? 'border-blue-500 ring-4 ring-blue-50' : 'border-slate-100 hover:shadow-md'}`}>
                                                     {isBulkMode ? (
@@ -679,16 +723,28 @@
                                                             <div className={`px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase border flex items-center gap-1 shrink-0 ${h >= 80 ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : h >= 40 ? 'bg-amber-50 border-amber-100 text-amber-600' : 'bg-rose-50 border-rose-100 text-rose-600'}`}>
                                                                 <Icon name="ShieldCheck" size={12}/> 健康度 {h}%
                                                             </div>
+                                                            <div className="sm:hidden flex items-center gap-2">
+                                                                <span className="text-[10px] bg-slate-100 text-slate-500 px-3 py-1 rounded-full font-black uppercase tracking-widest">{doneCount}/{backupTypes.length} 已備份</span>
+                                                                {!isBulkMode && (
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); toggleExpanded(folder.id); }}
+                                                                        className="text-[11px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full inline-flex items-center gap-1"
+                                                                    >
+                                                                        {isExpanded ? '收起' : '查看'} <Icon name={isExpanded ? 'ChevronUp' : 'ChevronDown'} size={16} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                             {backupTypes.map(t => {
                                                                 const isDone = folder.backups?.[t.id]?.active;
                                                                 return (
-                                                                    <div key={t.id} className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-bold border transition-all shrink-0 ${isDone ? 'bg-blue-50 border-blue-100 text-blue-600 shadow-sm' : 'bg-gray-50 border-gray-100 text-gray-200 opacity-40'}`}>
+                                                                    <div key={t.id} className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-bold border transition-all shrink-0 ${isDone ? 'bg-blue-50 border-blue-100 text-blue-600 shadow-sm' : 'bg-gray-50 border-gray-100 text-gray-200 opacity-40'}`}>
                                                                         <Icon name={t.iconName} size={12} strokeWidth={2.5} />
                                                                         <span>{t.label}</span>
                                                                     </div>
                                                                 );
                                                             })}
                                                         </div>
+                                                        {!isBulkMode && isExpanded && <MobileBackupDetails folder={folder} />}
                                                     </div>
                                                     {!isBulkMode && <button onClick={() => {
                                                         setEditingFolder(folder);
