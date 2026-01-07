@@ -238,8 +238,8 @@
                 return dates.length > 0 ? Math.max(...dates) : 0;
             };
 
-            const MobileBackupDetails = ({ folder }) => (
-                <div className="mt-4 bg-slate-50 rounded-2xl p-3 space-y-2">
+            const BackupDetails = ({ folder }) => (
+                <div className="mt-4 bg-slate-50 rounded-2xl p-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {backupTypes.map(t => {
                         const b = folder.backups?.[t.id] || {};
                         const isDone = !!b.active;
@@ -700,17 +700,9 @@
                                                             </div>
                                                             <div className="flex flex-wrap gap-2 mt-4">
                                                                 {isMobileUI && (
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-[10px] bg-slate-100 text-slate-500 px-3 py-1 rounded-full font-black uppercase tracking-widest">{doneCount}/{backupTypes.length} 已備份</span>
-                                                                        {!isBulkMode && (
-                                                                            <button
-                                                                                onClick={(e) => { e.stopPropagation(); toggleExpanded(folder.id); }}
-                                                                                className="text-[11px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full inline-flex items-center gap-1"
-                                                                            >
-                                                                                {isExpanded ? '收起' : '查看'} <Icon name={isExpanded ? 'ChevronUp' : 'ChevronDown'} size={16} />
-                                                                            </button>
-                                                                        )}
-                                                                    </div>
+                                                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-3 py-1 rounded-full font-black uppercase tracking-widest">
+                                                                        {doneCount}/{backupTypes.length} 已備份
+                                                                    </span>
                                                                 )}
                                                                 {!isMobileUI && backupTypes.map(t => {
                                                                     const isDone = folder.backups?.[t.id]?.active;
@@ -721,8 +713,16 @@
                                                                         </div>
                                                                     );
                                                                 })}
+                                                                {!isBulkMode && (
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); toggleExpanded(folder.id); }}
+                                                                        className="text-[11px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full inline-flex items-center gap-1"
+                                                                    >
+                                                                        {isExpanded ? '收起' : '明細'} <Icon name={isExpanded ? 'ChevronUp' : 'ChevronDown'} size={16} />
+                                                                    </button>
+                                                                )}
                                                             </div>
-                                                            {!isBulkMode && isMobileUI && isExpanded && <MobileBackupDetails folder={folder} />}
+                                                            {!isBulkMode && isExpanded && <BackupDetails folder={folder} />}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -762,16 +762,16 @@
                                                                     最近 {latestDate}
                                                                 </span>
                                                             )}
-                                                            {isMobileUI && !isBulkMode && (
+                                                            {!isBulkMode && (
                                                                 <button
                                                                     onClick={(e) => { e.stopPropagation(); toggleExpanded(folder.id); }}
                                                                     className="text-[11px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full inline-flex items-center gap-1"
                                                                 >
-                                                                    {isExpanded ? '收起' : '查看'} <Icon name={isExpanded ? 'ChevronUp' : 'ChevronDown'} size={16} />
+                                                                    {isExpanded ? '收起' : '明細'} <Icon name={isExpanded ? 'ChevronUp' : 'ChevronDown'} size={16} />
                                                                 </button>
                                                             )}
                                                         </div>
-                                                        {!isBulkMode && isMobileUI && isExpanded && <MobileBackupDetails folder={folder} />}
+                                                        {!isBulkMode && isExpanded && <BackupDetails folder={folder} />}
                                                     </div>
                                                     {!isBulkMode && <button onClick={() => {
                                                         setEditingFolder(folder);
