@@ -264,6 +264,36 @@
                 </div>
             );
 
+            const BackupAtAGlance = ({ folder, max = 6 }) => {
+                const active = backupTypes.filter(t => folder.backups?.[t.id]?.active);
+                if (active.length === 0) {
+                    return <div className="mt-2 text-[11px] font-bold text-slate-400">未有備份</div>;
+                }
+
+                const shown = active.slice(0, max);
+                const remaining = active.length - shown.length;
+
+                return (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        {shown.map(t => (
+                            <span
+                                key={t.id}
+                                title={t.label}
+                                className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-100 px-3 py-1 rounded-full text-[10px] font-bold"
+                            >
+                                <Icon name={t.iconName} size={14} strokeWidth={2.5} />
+                                <span className="max-w-[140px] truncate">{t.label}</span>
+                            </span>
+                        ))}
+                        {remaining > 0 && (
+                            <span className="inline-flex items-center bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-bold">
+                                +{remaining}
+                            </span>
+                        )}
+                    </div>
+                );
+            };
+
             const isMobileUI = uiMode === 'mobile' || (uiMode === 'auto' && isSmallScreen);
 
             const getUsedGb = (typeId) => folders.reduce((sum, f) => (f.backups?.[typeId]?.active ? sum + (parseFloat(f.sizeGb) || 0) : sum), 0);
@@ -699,20 +729,9 @@
                                                                 )}
                                                             </div>
                                                             <div className="flex flex-wrap gap-2 mt-4">
-                                                                {isMobileUI && (
-                                                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-3 py-1 rounded-full font-black uppercase tracking-widest">
-                                                                        {doneCount}/{backupTypes.length} 已備份
-                                                                    </span>
-                                                                )}
-                                                                {!isMobileUI && backupTypes.map(t => {
-                                                                    const isDone = folder.backups?.[t.id]?.active;
-                                                                    return (
-                                                                        <div key={t.id} className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-bold border transition-all shrink-0 ${isDone ? 'bg-blue-50 border-blue-100 text-blue-600 shadow-sm' : 'bg-gray-50 border-gray-100 text-gray-200 opacity-40'}`}>
-                                                                            <Icon name={t.iconName} size={12} strokeWidth={2.5} />
-                                                                            <span>{t.label}</span>
-                                                                        </div>
-                                                                    );
-                                                                })}
+                                                                <span className="text-[10px] bg-slate-100 text-slate-500 px-3 py-1 rounded-full font-black uppercase tracking-widest">
+                                                                    {doneCount}/{backupTypes.length} 已備份
+                                                                </span>
                                                                 {!isBulkMode && (
                                                                     <button
                                                                         onClick={(e) => { e.stopPropagation(); toggleExpanded(folder.id); }}
@@ -722,6 +741,7 @@
                                                                     </button>
                                                                 )}
                                                             </div>
+                                                            <BackupAtAGlance folder={folder} max={6} />
                                                             {!isBulkMode && isExpanded && <BackupDetails folder={folder} />}
                                                         </div>
                                                     </div>
@@ -771,6 +791,7 @@
                                                                 </button>
                                                             )}
                                                         </div>
+                                                        <BackupAtAGlance folder={folder} max={4} />
                                                         {!isBulkMode && isExpanded && <BackupDetails folder={folder} />}
                                                     </div>
                                                     {!isBulkMode && <button onClick={() => {
