@@ -30,6 +30,9 @@
             padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
         }
+        :root { --safe-top: env(safe-area-inset-top, 0px); }
+        .sticky-safe-top { top: var(--safe-top); }
+        .sticky-safe-after-header { top: calc(var(--safe-top) + 4rem); } /* 4rem = h-16 */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .glass-morphism { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
@@ -464,7 +467,7 @@
             return (
                 <div className="min-h-screen min-h-[100dvh] pb-24 pb-[calc(6rem+env(safe-area-inset-bottom))] max-w-4xl mx-auto">
                     {/* Header */}
-                    <header className="bg-white/80 glass-morphism border-b sticky top-0 z-40 px-4 h-16 flex items-center justify-between shadow-sm rounded-b-3xl">
+                    <header className="bg-white/80 glass-morphism border-b sticky sticky-safe-top z-40 px-4 h-16 flex items-center justify-between shadow-sm rounded-b-3xl">
                         <div className="flex items-center gap-2">
                             {!['list','grid','matrix'].includes(viewMode) && (
                                 <button onClick={() => setViewMode('list')} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors">
@@ -670,7 +673,7 @@
                                 {viewMode === 'matrix' ? (
                                     isMobileUI ? (
                                         <div className="space-y-4">
-	                                            <div className="sticky top-16 z-20 bg-slate-50/90 backdrop-blur border border-slate-100 rounded-2xl p-3">
+	                                            <div className="sticky sticky-safe-after-header z-20 bg-slate-50/95 backdrop-blur border border-slate-100 rounded-2xl p-3">
 	                                                <div className="grid grid-cols-4 gap-1.5">
 	                                                    {backupTypes.map(t => (
 	                                                        <div key={t.id} className="p-2 rounded-xl bg-white border border-slate-100 text-center">
