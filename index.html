@@ -638,11 +638,11 @@
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="flex items-start justify-between gap-3">
                                                                     <div className="min-w-0">
-                                                                        <h3 className="font-black text-slate-800 text-lg truncate">{folder.name}</h3>
+                                                                        <h3 className="font-black text-slate-800 text-base truncate">{folder.name}</h3>
                                                                         <div className="flex flex-wrap gap-2 mt-2">
-                                                                            <span className="text-[10px] bg-slate-100 text-slate-500 px-3 py-1 rounded-full font-black uppercase tracking-widest">{doneCount}/{backupTypes.length} 已備份</span>
-                                                                            <span className="text-[10px] bg-slate-100 text-slate-400 px-3 py-1 rounded-full font-black uppercase tracking-widest">{formatSize(folder.sizeGb)}</span>
-                                                                            <span className="text-[10px] bg-slate-100 text-slate-500 px-3 py-1 rounded-full font-black uppercase tracking-widest inline-flex items-center gap-2">
+                                                                            <span className="text-[9px] bg-slate-100 text-slate-500 px-2.5 py-0.5 rounded-full font-black uppercase tracking-widest">{doneCount}/{backupTypes.length} 已備份</span>
+                                                                            <span className="text-[9px] bg-slate-100 text-slate-400 px-2.5 py-0.5 rounded-full font-black uppercase tracking-widest">{formatSize(folder.sizeGb)}</span>
+                                                                            <span className="text-[9px] bg-slate-100 text-slate-500 px-2.5 py-0.5 rounded-full font-black uppercase tracking-widest inline-flex items-center gap-2">
                                                                                 <span className={`w-2 h-2 rounded-full ${h >= 80 ? 'bg-emerald-500' : h >= 40 ? 'bg-amber-500' : 'bg-rose-500'}`} />
                                                                                 健康度
                                                                             </span>
@@ -657,29 +657,25 @@
                                                                     )}
                                                                 </div>
 
-                                                                <div className="mt-4 grid grid-cols-2 gap-2">
+                                                                <div className="mt-3 grid grid-cols-4 gap-1.5">
                                                                     {backupTypes.map(t => {
                                                                         const b = folder.backups?.[t.id] || {};
                                                                         const isDone = !!b.active;
-                                                                        const cellClass = `p-3 rounded-2xl border text-left transition-colors ${isDone ? 'bg-blue-50/50 border-blue-100' : 'bg-slate-50 border-transparent'} ${isBulkMode ? '' : 'hover:bg-slate-100'}`;
+                                                                        const cellTitle = `${t.label}｜${isDone ? `已備份${b.date ? ` ${b.date}` : ''}` : '未備份'}`;
+                                                                        const cellClass = `p-2 rounded-xl border text-center transition-colors ${isDone ? 'bg-blue-50/50 border-blue-100' : 'bg-slate-50 border-transparent'} ${isBulkMode ? '' : 'hover:bg-slate-100'}`;
                                                                         const content = (
-                                                                            <div className="flex items-start justify-between gap-2">
-                                                                                <div className="min-w-0">
-                                                                                    <div className="flex items-center gap-2">
-                                                                                        <div className={`p-1.5 rounded-xl ${isDone ? 'bg-blue-100 text-blue-700' : 'bg-white text-slate-400'}`}>
-                                                                                            <Icon name={t.iconName} size={16} strokeWidth={2.5} />
-                                                                                        </div>
-                                                                                        <div className={`text-[12px] font-black truncate ${isDone ? 'text-blue-700' : 'text-slate-500'}`}>{t.label}</div>
-                                                                                    </div>
-                                                                                    {isDone && b.date && <div className="mt-1 text-[10px] font-bold text-slate-400">{b.date}</div>}
+                                                                            <div className="flex flex-col items-center gap-1">
+                                                                                <div className={`p-1.5 rounded-lg ${isDone ? 'bg-blue-100 text-blue-700' : 'bg-white text-slate-400'}`}>
+                                                                                    <Icon name={t.iconName} size={14} strokeWidth={2.5} />
                                                                                 </div>
-                                                                                <div className={`${isDone ? 'text-blue-600' : 'text-slate-300'}`}>{isDone ? <Icon name="CheckCircle2" size={18} /> : <Icon name="Circle" size={18} />}</div>
+                                                                                <div className={`${isDone ? 'text-blue-600' : 'text-slate-300'}`}>{isDone ? <Icon name="CheckCircle2" size={16} /> : <Icon name="Circle" size={16} />}</div>
+                                                                                <div className={`w-full text-[9px] font-black truncate leading-tight ${isDone ? 'text-blue-700' : 'text-slate-500'}`}>{t.label}</div>
                                                                             </div>
                                                                         );
 
-                                                                        if (isBulkMode) return <div key={t.id} className={cellClass}>{content}</div>;
+                                                                        if (isBulkMode) return <div key={t.id} className={cellClass} title={cellTitle}>{content}</div>;
                                                                         return (
-                                                                            <button key={t.id} onClick={(e) => { e.stopPropagation(); toggleBackupStatus(folder.id, t.id); }} className={cellClass}>
+                                                                            <button key={t.id} onClick={(e) => { e.stopPropagation(); toggleBackupStatus(folder.id, t.id); }} className={cellClass} title={cellTitle}>
                                                                                 {content}
                                                                             </button>
                                                                         );
