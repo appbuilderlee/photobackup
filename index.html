@@ -302,6 +302,7 @@
             };
 
             const isMobileUI = uiMode === 'mobile' || (uiMode === 'auto' && isSmallScreen);
+            const matrixMobileCols = Math.min(5, Math.max(1, backupTypes.length));
 
             const getUsedGb = (typeId) => folders.reduce((sum, f) => (f.backups?.[typeId]?.active ? sum + (parseFloat(f.sizeGb) || 0) : sum), 0);
 
@@ -673,14 +674,14 @@
                                 {viewMode === 'matrix' ? (
                                     isMobileUI ? (
                                         <div className="space-y-4">
-	                                            <div className="sticky sticky-safe-after-header z-20 bg-slate-50/95 backdrop-blur border border-slate-100 rounded-2xl p-3">
-	                                                <div className="grid grid-cols-4 gap-1.5">
+	                                            <div className="sticky sticky-safe-after-header z-20 bg-slate-50/95 backdrop-blur border border-slate-100 rounded-2xl p-2">
+	                                                <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${matrixMobileCols}, minmax(0, 1fr))` }}>
 	                                                    {backupTypes.map(t => (
-	                                                        <div key={t.id} className="p-2 rounded-xl bg-white border border-slate-100 text-center">
-	                                                            <div className="inline-flex items-center justify-center p-1.5 rounded-lg bg-slate-50 text-blue-700">
-	                                                                <Icon name={t.iconName} size={14} strokeWidth={2.5} />
+	                                                        <div key={t.id} className="p-1.5 rounded-xl bg-white border border-slate-100 text-center">
+	                                                            <div className="inline-flex items-center justify-center p-1 rounded-lg bg-slate-50 text-blue-700">
+	                                                                <Icon name={t.iconName} size={12} strokeWidth={2.5} />
 	                                                            </div>
-	                                                            <div className="mt-1 text-[9px] font-black text-slate-600 truncate leading-tight">{t.label}</div>
+	                                                            <div className="mt-1 text-[8px] font-black text-slate-600 truncate leading-tight">{t.label}</div>
 	                                                        </div>
 	                                                    ))}
 	                                                </div>
@@ -723,16 +724,16 @@
                                                                     )}
                                                                 </div>
 
-	                                                                <div className="mt-3 grid grid-cols-4 gap-1.5">
+	                                                                <div className="mt-3 grid gap-1" style={{ gridTemplateColumns: `repeat(${matrixMobileCols}, minmax(0, 1fr))` }}>
 	                                                                    {backupTypes.map(t => {
 	                                                                        const b = folder.backups?.[t.id] || {};
 	                                                                        const isDone = !!b.active;
 	                                                                        const cellTitle = `${t.label}｜${isDone ? `已備份${b.date ? ` ${b.date}` : ''}` : '未備份'}`;
-	                                                                        const cellClass = `p-2 rounded-xl border text-center transition-colors ${isDone ? 'bg-blue-50/50 border-blue-100' : 'bg-slate-50 border-transparent'} ${isBulkMode ? '' : 'hover:bg-slate-100'}`;
+	                                                                        const cellClass = `p-1.5 rounded-xl border text-center transition-colors ${isDone ? 'bg-blue-50/50 border-blue-100' : 'bg-slate-50 border-transparent'} ${isBulkMode ? '' : 'hover:bg-slate-100'}`;
 	                                                                        const content = (
 	                                                                            <div className="flex items-center justify-center">
 	                                                                                <span className={`${isDone ? 'text-blue-600' : 'text-slate-300'}`}>
-	                                                                                    {isDone ? <Icon name="CheckCircle2" size={18} /> : <Icon name="Circle" size={18} />}
+	                                                                                    {isDone ? <Icon name="CheckCircle2" size={16} /> : <Icon name="Circle" size={16} />}
 	                                                                                </span>
 	                                                                            </div>
 	                                                                        );
