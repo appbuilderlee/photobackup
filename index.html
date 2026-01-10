@@ -652,7 +652,7 @@
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="flex items-start justify-between gap-3">
                                                                     <div className="min-w-0">
-                                                                        <h3 className="font-black text-slate-800 text-base line-clamp-2 sm:truncate">{folder.name}</h3>
+                                                                        <h3 className="font-black text-slate-800 text-base line-clamp-3">{folder.name}</h3>
                                                                         <div className="flex flex-wrap gap-2 mt-2">
                                                                             <span className="text-[9px] bg-slate-100 text-slate-500 px-2.5 py-0.5 rounded-full font-black uppercase tracking-widest">{doneCount}/{backupTypes.length} 已備份</span>
                                                                             <span className="text-[9px] bg-slate-100 text-slate-400 px-2.5 py-0.5 rounded-full font-black uppercase tracking-widest">{formatSize(folder.sizeGb)}</span>
@@ -738,7 +738,7 @@
                                                                             )}
                                                                             <div className="min-w-0">
                                                                                 <div className="flex items-center gap-2">
-                                                                                    <div className="font-black text-slate-800 truncate">{folder.name}</div>
+                                                                                    <div className="font-black text-slate-800 line-clamp-3 leading-snug">{folder.name}</div>
                                                                                     <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full font-black uppercase tracking-widest shrink-0">{formatSize(folder.sizeGb)}</span>
                                                                                 </div>
                                                                                 <div className={`mt-2 inline-flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase border ${h >= 80 ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : h >= 40 ? 'bg-amber-50 border-amber-100 text-amber-600' : 'bg-rose-50 border-rose-100 text-rose-600'}`}>
@@ -798,7 +798,7 @@
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-start justify-between gap-3">
                                                                 <div className="min-w-0">
-                                                                    <h3 className="font-black text-slate-800 text-lg line-clamp-2 sm:truncate">{folder.name}</h3>
+                                                                    <h3 className="font-black text-slate-800 text-lg line-clamp-3">{folder.name}</h3>
                                                                     <div className="flex flex-wrap gap-2 mt-2">
                                                                         <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full font-black uppercase tracking-widest shrink-0">{formatSize(folder.sizeGb)}</span>
                                                                         <span className={`px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase border flex items-center gap-1 shrink-0 ${h >= 80 ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : h >= 40 ? 'bg-amber-50 border-amber-100 text-amber-600' : 'bg-rose-50 border-rose-100 text-rose-600'}`}><Icon name="ShieldCheck" size={12}/> 健康度 {h}%</span>
@@ -853,7 +853,7 @@
                                                     )}
                                                     <div className="flex-1 min-w-0" onClick={() => isBulkMode && toggleSelection(folder.id)}>
                                                         <div className="flex items-center gap-2">
-                                                            <h3 className="font-bold text-slate-800 line-clamp-2 sm:truncate">{folder.name}</h3>
+                                                            <h3 className="font-bold text-slate-800 line-clamp-3">{folder.name}</h3>
                                                             <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full font-black uppercase tracking-widest shrink-0">{formatSize(folder.sizeGb)}</span>
                                                         </div>
                                                         <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-bold text-slate-500">
