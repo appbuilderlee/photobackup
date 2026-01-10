@@ -136,6 +136,8 @@
             const [expandedFolderIds, setExpandedFolderIds] = useState([]);
             const [uiMode, setUiMode] = useState('auto'); // auto, desktop, mobile
             const [isSmallScreen, setIsSmallScreen] = useState(false);
+            const [isReorderMode, setIsReorderMode] = useState(false);
+            const [draggingFolderId, setDraggingFolderId] = useState(null);
 
             const [sizeUnit, setSizeUnit] = useState('GB');
             const [isScanning, setIsScanning] = useState(false);
@@ -210,7 +212,7 @@
                     const kept = prev.filter(id => folderIds.includes(id));
                     const newIds = folderIds.filter(id => !prevSet.has(id));
                     if (newIds.length === 0 && kept.length === prev.length) return prev;
-                    return [...newIds, ...kept];
+                    return [...kept, ...newIds];
                 });
             }, [folders]);
 
@@ -338,6 +340,40 @@
                 });
             };
 
+            const reorderByDrag = (dragId, dropId) => {
+                if (!dragId || !dropId || dragId === dropId) return;
+                setManualOrder(prev => {
+                    const without = prev.filter(id => id !== dragId);
+                    const dropIndex = without.indexOf(dropId);
+                    const insertAt = dropIndex === -1 ? without.length : dropIndex;
+                    without.splice(insertAt, 0, dragId);
+                    return without;
+                });
+                setSortType('manual');
+            };
+
+            const dragProps = (id) => {
+                if (!isReorderMode) return {};
+                return {
+                    draggable: true,
+                    onDragStart: (e) => {
+                        setDraggingFolderId(id);
+                        try { e.dataTransfer.setData('text/plain', String(id)); } catch {}
+                        e.dataTransfer.effectAllowed = 'move';
+                    },
+                    onDragOver: (e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                    },
+                    onDrop: (e) => {
+                        e.preventDefault();
+                        reorderByDrag(draggingFolderId, id);
+                        setDraggingFolderId(null);
+                    },
+                    onDragEnd: () => setDraggingFolderId(null)
+                };
+            };
+
             // --- 排序邏輯擴充 ---
             const processedFolders = useMemo(() => {
                 const normalizedSearch = searchTerm.toLowerCase();
@@ -378,19 +414,24 @@
             // --- 介面操作 ---
             const toggleSelection = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
             const toggleExpanded = (id) => setExpandedFolderIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+            const toggleReorderMode = () => {
+                setSortType('manual');
+                setIsReorderMode(v => !v);
+                setExpandedFolderIds([]);
+            };
 
             const handleBulkImport = () => {
                 const names = bulkText.split('\n').map(n => n.trim()).filter(n => n !== "");
                 if (names.length === 0) return;
                 const newItems = names.map(name => ({ id: Date.now() + Math.random(), name, sizeGb: 0, backups: {} }));
-                setFolders([...newItems, ...folders]);
+                setFolders([...folders, ...newItems]);
                 setBulkText("");
                 setViewMode('list');
             };
 
             const confirmPhotoImport = () => {
                 const news = pendingPhotos.filter(p => p.selected).map(p => ({ id: Date.now() + Math.random(), name: p.name, sizeGb: parseFloat(p.sizeGb), backups: {} }));
-                setFolders([...news, ...folders]);
+                setFolders([...folders, ...news]);
                 setViewMode('list');
             };
 
@@ -410,7 +451,7 @@
                     };
                 });
                 if (editingFolder) setFolders(folders.map(f => f.id === obj.id ? obj : f));
-                else setFolders([obj, ...folders]);
+                else setFolders([...folders, obj]);
                 setIsModalOpen(false); setEditingFolder(null);
             };
 
@@ -615,12 +656,20 @@
                                         <button onClick={() => setIsBulkMode(!isBulkMode)} className={`px-4 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all ${isBulkMode ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 shadow-sm'}`}>
                                             {isBulkMode ? <Icon name="CheckSquare" size={18}/> : <Icon name="Square" size={18}/>} 批次
                                         </button>
+                                        <button onClick={toggleReorderMode} className={`px-4 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all ${isReorderMode ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white text-slate-600 shadow-sm'}`} title="手動排序（拖曳/按上下移動）">
+                                            <Icon name="ArrowUpDown" size={18}/> 排列
+                                        </button>
                                     </div>
                                 </div>
+                                {isReorderMode && (
+                                    <div className="mb-6 bg-blue-50 border border-blue-100 text-blue-700 rounded-2xl px-4 py-3 text-sm font-bold flex items-center gap-2">
+                                        <Icon name="ArrowUpDown" size={18} /> 拖曳卡片可排序（已自動儲存自訂次序）
+                                    </div>
+                                )}
 
                                 {viewMode === 'matrix' ? (
-	                                    isMobileUI ? (
-	                                        <div className="space-y-4">
+                                    isMobileUI ? (
+                                        <div className="space-y-4">
 	                                            <div className="sticky top-16 z-20 bg-slate-50/90 backdrop-blur border border-slate-100 rounded-2xl p-3">
 	                                                <div className="grid grid-cols-4 gap-1.5">
 	                                                    {backupTypes.map(t => (
@@ -784,7 +833,7 @@
                                             const isExpanded = expandedFolderIds.includes(folder.id);
                                             const doneCount = backupTypes.filter(t => folder.backups?.[t.id]?.active).length;
                                             return (
-                                                <div key={folder.id} onClick={() => isBulkMode && toggleSelection(folder.id)} className={`bg-white rounded-[2rem] shadow-sm border p-5 transition-all ${isBulkMode ? 'cursor-pointer active:scale-95' : 'hover:shadow-md'} ${isSel ? 'border-blue-500 ring-4 ring-blue-50' : 'border-slate-100'}`}>
+                                                <div key={folder.id} {...dragProps(folder.id)} onClick={() => isBulkMode && toggleSelection(folder.id)} className={`bg-white rounded-[2rem] shadow-sm border p-5 transition-all ${isReorderMode ? 'cursor-move' : isBulkMode ? 'cursor-pointer active:scale-95' : 'hover:shadow-md'} ${isSel ? 'border-blue-500 ring-4 ring-blue-50' : 'border-slate-100'} ${draggingFolderId === folder.id ? 'opacity-60' : ''}`}>
                                                     <div className="flex items-start gap-4">
                                                         {isBulkMode && (
                                                             <div onClick={() => toggleSelection(folder.id)} className={`p-2 rounded-xl ${isSel ? 'text-blue-600' : 'text-slate-200'}`}>{isSel ? <Icon name="CheckSquare" size={28}/> : <Icon name="Square" size={28}/>}</div>
@@ -804,7 +853,7 @@
                                                                         <span className={`px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase border flex items-center gap-1 shrink-0 ${h >= 80 ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : h >= 40 ? 'bg-amber-50 border-amber-100 text-amber-600' : 'bg-rose-50 border-rose-100 text-rose-600'}`}><Icon name="ShieldCheck" size={12}/> 健康度 {h}%</span>
                                                                     </div>
                                                                 </div>
-                                                                {!isBulkMode && (
+                                                                {!isBulkMode && !isReorderMode && (
                                                                     <button onClick={() => {
                                                                         setEditingFolder(folder);
                                                                         setSizeUnit(folder.sizeGb < 1 ? 'MB' : 'GB');
@@ -816,7 +865,7 @@
                                                                 <span className="text-[10px] bg-slate-100 text-slate-500 px-3 py-1 rounded-full font-black uppercase tracking-widest">
                                                                     {doneCount}/{backupTypes.length} 已備份
                                                                 </span>
-                                                                {!isBulkMode && (
+                                                                {!isBulkMode && !isReorderMode && (
                                                                     <button
                                                                         onClick={(e) => { e.stopPropagation(); toggleExpanded(folder.id); }}
                                                                         className="text-[11px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full inline-flex items-center gap-1"
@@ -826,7 +875,7 @@
                                                                 )}
                                                             </div>
                                                             <BackupAtAGlance folder={folder} max={6} />
-                                                            {!isBulkMode && isExpanded && <BackupDetails folder={folder} />}
+                                                            {!isBulkMode && !isReorderMode && isExpanded && <BackupDetails folder={folder} />}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -842,7 +891,7 @@
                                             const doneCount = backupTypes.filter(t => folder.backups?.[t.id]?.active).length;
                                             const latestDate = Object.values(folder.backups || {}).filter(b => b?.active && b?.date).map(b => b.date).sort().pop();
                                             return (
-                                                <div key={folder.id} onClick={() => isBulkMode && toggleSelection(folder.id)} className={`bg-white rounded-[2rem] shadow-sm border p-4 flex items-center gap-4 transition-all ${isBulkMode ? 'cursor-pointer active:scale-95' : ''} ${isSel ? 'border-blue-500 ring-4 ring-blue-50' : 'border-slate-100 hover:shadow-md'}`}>
+                                                <div key={folder.id} {...dragProps(folder.id)} onClick={() => isBulkMode && toggleSelection(folder.id)} className={`bg-white rounded-[2rem] shadow-sm border p-4 flex items-center gap-4 transition-all ${isReorderMode ? 'cursor-move' : isBulkMode ? 'cursor-pointer active:scale-95' : ''} ${isSel ? 'border-blue-500 ring-4 ring-blue-50' : 'border-slate-100 hover:shadow-md'} ${draggingFolderId === folder.id ? 'opacity-60' : ''}`}>
                                                     {isBulkMode ? (
                                                         <div onClick={() => toggleSelection(folder.id)} className={`p-2 rounded-xl ${isSel ? 'text-blue-600' : 'text-slate-200'}`}>{isSel ? <Icon name="CheckSquare" size={28}/> : <Icon name="Square" size={28}/>}</div>
                                                     ) : (
@@ -876,9 +925,9 @@
                                                             )}
                                                         </div>
                                                         <BackupAtAGlance folder={folder} max={4} />
-                                                        {!isBulkMode && isExpanded && <BackupDetails folder={folder} />}
+                                                        {!isBulkMode && !isReorderMode && isExpanded && <BackupDetails folder={folder} />}
                                                     </div>
-                                                    {!isBulkMode && <button onClick={() => {
+                                                    {!isBulkMode && !isReorderMode && <button onClick={() => {
                                                         setEditingFolder(folder);
                                                         setSizeUnit(folder.sizeGb < 1 ? 'MB' : 'GB');
                                                         setIsModalOpen(true);
