@@ -617,81 +617,157 @@
                                 </div>
 
                                 {viewMode === 'matrix' ? (
-                                    <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
-                                        <div className="overflow-x-auto">
-                                            <table className="min-w-full text-sm">
-                                                <thead className="bg-slate-50 text-slate-400 uppercase tracking-widest text-[10px] font-black">
-                                                    <tr>
-                                                        <th className="text-left p-4 sticky left-0 bg-slate-50 z-10 min-w-[220px]">相集</th>
-                                                        {backupTypes.map(t => (
-                                                            <th key={t.id} className="text-left p-4 whitespace-nowrap min-w-[140px]">
-                                                                <span className="inline-flex items-center gap-2">
-                                                                    <Icon name={t.iconName} size={14} className="text-blue-600" strokeWidth={2.5} />
-                                                                    {t.label}
-                                                                </span>
-                                                            </th>
-                                                        ))}
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {processedFolders.map((folder, idx) => {
-                                                        const h = calculateHealth(folder);
-                                                        const isSel = selectedIds.includes(folder.id);
-                                                        return (
-                                                            <tr key={folder.id} onClick={() => {
-                                                                if (isBulkMode) toggleSelection(folder.id);
-                                                                else { setEditingFolder(folder); setSizeUnit(folder.sizeGb < 1 ? 'MB' : 'GB'); setIsModalOpen(true); }
-                                                            }} className={`border-t border-slate-100 transition-colors ${isBulkMode ? 'cursor-pointer' : 'cursor-pointer hover:bg-slate-50'} ${isSel ? 'bg-blue-50' : ''}`}>
-                                                                <td className={`p-4 sticky left-0 z-10 ${isSel ? 'bg-blue-50' : 'bg-white'}`}>
-                                                                    <div className="flex items-start gap-3">
-                                                                        {isBulkMode && (
-                                                                            <div className={`pt-1 ${isSel ? 'text-blue-600' : 'text-slate-200'}`}>{isSel ? <Icon name="CheckSquare" size={22}/> : <Icon name="Square" size={22}/>}</div>
-                                                                        )}
-                                                                        {!isBulkMode && (
-                                                                            <div className="flex flex-col text-slate-200 shrink-0 pt-0.5">
-                                                                                <button onClick={(e) => {e.stopPropagation(); moveItem(folder.id, -1, visibleFolderIds); setSortType('manual');}} className="p-1 hover:text-blue-400 disabled:opacity-20" disabled={idx === 0} title="上移"><Icon name="ChevronUp" size={20}/></button>
-                                                                                <button onClick={(e) => {e.stopPropagation(); moveItem(folder.id, 1, visibleFolderIds); setSortType('manual');}} className="p-1 hover:text-blue-400 disabled:opacity-20" disabled={idx === processedFolders.length - 1} title="下移"><Icon name="ChevronDown" size={20}/></button>
-                                                                            </div>
-                                                                        )}
-                                                                        <div className="min-w-0">
-                                                                            <div className="flex items-center gap-2">
-                                                                                <div className="font-black text-slate-800 truncate">{folder.name}</div>
-                                                                                <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full font-black uppercase tracking-widest shrink-0">{formatSize(folder.sizeGb)}</span>
-                                                                            </div>
-                                                                            <div className={`mt-2 inline-flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase border ${h >= 80 ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : h >= 40 ? 'bg-amber-50 border-amber-100 text-amber-600' : 'bg-rose-50 border-rose-100 text-rose-600'}`}>
-                                                                                <Icon name="ShieldCheck" size={12}/> 健康度 {h}%
-                                                                            </div>
+                                    isMobileUI ? (
+                                        <div className="space-y-4">
+                                            {processedFolders.map((folder, idx) => {
+                                                const h = calculateHealth(folder);
+                                                const isSel = selectedIds.includes(folder.id);
+                                                const doneCount = backupTypes.filter(t => folder.backups?.[t.id]?.active).length;
+                                                return (
+                                                    <div key={folder.id} onClick={() => isBulkMode && toggleSelection(folder.id)} className={`bg-white rounded-[2rem] shadow-sm border p-4 transition-all ${isBulkMode ? 'cursor-pointer active:scale-95' : ''} ${isSel ? 'border-blue-500 ring-4 ring-blue-50' : 'border-slate-100'}`}>
+                                                        <div className="flex items-start gap-4">
+                                                            {isBulkMode ? (
+                                                                <div onClick={() => toggleSelection(folder.id)} className={`p-2 rounded-xl ${isSel ? 'text-blue-600' : 'text-slate-200'}`}>{isSel ? <Icon name="CheckSquare" size={28}/> : <Icon name="Square" size={28}/>}</div>
+                                                            ) : (
+                                                                <div className="flex flex-col text-slate-200 shrink-0 pt-1">
+                                                                    <button onClick={(e) => {e.stopPropagation(); moveItem(folder.id, -1, visibleFolderIds); setSortType('manual');}} className="p-1 hover:text-blue-400 disabled:opacity-20" disabled={idx === 0} title="上移"><Icon name="ChevronUp" size={22}/></button>
+                                                                    <button onClick={(e) => {e.stopPropagation(); moveItem(folder.id, 1, visibleFolderIds); setSortType('manual');}} className="p-1 hover:text-blue-400 disabled:opacity-20" disabled={idx === processedFolders.length - 1} title="下移"><Icon name="ChevronDown" size={22}/></button>
+                                                                </div>
+                                                            )}
+
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-start justify-between gap-3">
+                                                                    <div className="min-w-0">
+                                                                        <h3 className="font-black text-slate-800 text-lg truncate">{folder.name}</h3>
+                                                                        <div className="flex flex-wrap gap-2 mt-2">
+                                                                            <span className="text-[10px] bg-slate-100 text-slate-500 px-3 py-1 rounded-full font-black uppercase tracking-widest">{doneCount}/{backupTypes.length} 已備份</span>
+                                                                            <span className="text-[10px] bg-slate-100 text-slate-400 px-3 py-1 rounded-full font-black uppercase tracking-widest">{formatSize(folder.sizeGb)}</span>
+                                                                            <span className="text-[10px] bg-slate-100 text-slate-500 px-3 py-1 rounded-full font-black uppercase tracking-widest inline-flex items-center gap-2">
+                                                                                <span className={`w-2 h-2 rounded-full ${h >= 80 ? 'bg-emerald-500' : h >= 40 ? 'bg-amber-500' : 'bg-rose-500'}`} />
+                                                                                健康度
+                                                                            </span>
                                                                         </div>
                                                                     </div>
-                                                                </td>
-                                                                {backupTypes.map(t => {
-                                                                    const isDone = folder.backups?.[t.id]?.active;
-                                                                    const content = (
-                                                                        <span className={`inline-flex items-center gap-2 font-bold ${isDone ? 'text-blue-600' : 'text-slate-200'}`}>
-                                                                            {isDone ? <Icon name="CheckCircle2" size={18} /> : <Icon name="Circle" size={18} />}
-                                                                            <span className="text-xs">{isDone ? '已備份' : '未備份'}</span>
-                                                                        </span>
-                                                                    );
-                                                                    return (
-                                                                        <td key={t.id} className="p-4">
-                                                                            {isBulkMode ? (
-                                                                                content
-                                                                            ) : (
-                                                                                <button onClick={(e) => { e.stopPropagation(); toggleBackupStatus(folder.id, t.id); }} className="w-full text-left p-3 rounded-2xl hover:bg-slate-50 transition-colors">
-                                                                                    {content}
-                                                                                    {isDone && folder.backups?.[t.id]?.date && <div className="mt-1 text-[10px] font-bold text-slate-400">{folder.backups?.[t.id]?.date}</div>}
-                                                                                </button>
-                                                                            )}
-                                                                        </td>
-                                                                    );
-                                                                })}
-                                                            </tr>
-                                                        );
-                                                    })}
-                                                </tbody>
-                                            </table>
+                                                                    {!isBulkMode && (
+                                                                        <button onClick={() => {
+                                                                            setEditingFolder(folder);
+                                                                            setSizeUnit(folder.sizeGb < 1 ? 'MB' : 'GB');
+                                                                            setIsModalOpen(true);
+                                                                        }} className="p-3 bg-slate-50 text-slate-300 hover:text-blue-600 rounded-2xl transition-all hover:bg-blue-50 shrink-0" title="編輯"><Icon name="Edit2" size={18}/></button>
+                                                                    )}
+                                                                </div>
+
+                                                                <div className="mt-4 grid grid-cols-2 gap-2">
+                                                                    {backupTypes.map(t => {
+                                                                        const b = folder.backups?.[t.id] || {};
+                                                                        const isDone = !!b.active;
+                                                                        const cellClass = `p-3 rounded-2xl border text-left transition-colors ${isDone ? 'bg-blue-50/50 border-blue-100' : 'bg-slate-50 border-transparent'} ${isBulkMode ? '' : 'hover:bg-slate-100'}`;
+                                                                        const content = (
+                                                                            <div className="flex items-start justify-between gap-2">
+                                                                                <div className="min-w-0">
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <div className={`p-1.5 rounded-xl ${isDone ? 'bg-blue-100 text-blue-700' : 'bg-white text-slate-400'}`}>
+                                                                                            <Icon name={t.iconName} size={16} strokeWidth={2.5} />
+                                                                                        </div>
+                                                                                        <div className={`text-[12px] font-black truncate ${isDone ? 'text-blue-700' : 'text-slate-500'}`}>{t.label}</div>
+                                                                                    </div>
+                                                                                    {isDone && b.date && <div className="mt-1 text-[10px] font-bold text-slate-400">{b.date}</div>}
+                                                                                </div>
+                                                                                <div className={`${isDone ? 'text-blue-600' : 'text-slate-300'}`}>{isDone ? <Icon name="CheckCircle2" size={18} /> : <Icon name="Circle" size={18} />}</div>
+                                                                            </div>
+                                                                        );
+
+                                                                        if (isBulkMode) return <div key={t.id} className={cellClass}>{content}</div>;
+                                                                        return (
+                                                                            <button key={t.id} onClick={(e) => { e.stopPropagation(); toggleBackupStatus(folder.id, t.id); }} className={cellClass}>
+                                                                                {content}
+                                                                            </button>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
-                                    </div>
+                                    ) : (
+                                        <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+                                            <div className="overflow-x-auto touch-pan-x overscroll-x-contain no-scrollbar">
+                                                <table className="min-w-full text-sm">
+                                                    <thead className="bg-slate-50 text-slate-400 uppercase tracking-widest text-[10px] font-black">
+                                                        <tr>
+                                                            <th className="text-left p-4 sticky left-0 bg-slate-50 z-10 min-w-[220px]">相集</th>
+                                                            {backupTypes.map(t => (
+                                                                <th key={t.id} className="text-left p-4 whitespace-nowrap min-w-[140px]">
+                                                                    <span className="inline-flex items-center gap-2">
+                                                                        <Icon name={t.iconName} size={14} className="text-blue-600" strokeWidth={2.5} />
+                                                                        {t.label}
+                                                                    </span>
+                                                                </th>
+                                                            ))}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {processedFolders.map((folder, idx) => {
+                                                            const h = calculateHealth(folder);
+                                                            const isSel = selectedIds.includes(folder.id);
+                                                            return (
+                                                                <tr key={folder.id} onClick={() => {
+                                                                    if (isBulkMode) toggleSelection(folder.id);
+                                                                    else { setEditingFolder(folder); setSizeUnit(folder.sizeGb < 1 ? 'MB' : 'GB'); setIsModalOpen(true); }
+                                                                }} className={`border-t border-slate-100 transition-colors ${isBulkMode ? 'cursor-pointer' : 'cursor-pointer hover:bg-slate-50'} ${isSel ? 'bg-blue-50' : ''}`}>
+                                                                    <td className={`p-4 sticky left-0 z-10 ${isSel ? 'bg-blue-50' : 'bg-white'}`}>
+                                                                        <div className="flex items-start gap-3">
+                                                                            {isBulkMode && (
+                                                                                <div className={`pt-1 ${isSel ? 'text-blue-600' : 'text-slate-200'}`}>{isSel ? <Icon name="CheckSquare" size={22}/> : <Icon name="Square" size={22}/>}</div>
+                                                                            )}
+                                                                            {!isBulkMode && (
+                                                                                <div className="flex flex-col text-slate-200 shrink-0 pt-0.5">
+                                                                                    <button onClick={(e) => {e.stopPropagation(); moveItem(folder.id, -1, visibleFolderIds); setSortType('manual');}} className="p-1 hover:text-blue-400 disabled:opacity-20" disabled={idx === 0} title="上移"><Icon name="ChevronUp" size={20}/></button>
+                                                                                    <button onClick={(e) => {e.stopPropagation(); moveItem(folder.id, 1, visibleFolderIds); setSortType('manual');}} className="p-1 hover:text-blue-400 disabled:opacity-20" disabled={idx === processedFolders.length - 1} title="下移"><Icon name="ChevronDown" size={20}/></button>
+                                                                                </div>
+                                                                            )}
+                                                                            <div className="min-w-0">
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <div className="font-black text-slate-800 truncate">{folder.name}</div>
+                                                                                    <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full font-black uppercase tracking-widest shrink-0">{formatSize(folder.sizeGb)}</span>
+                                                                                </div>
+                                                                                <div className={`mt-2 inline-flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase border ${h >= 80 ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : h >= 40 ? 'bg-amber-50 border-amber-100 text-amber-600' : 'bg-rose-50 border-rose-100 text-rose-600'}`}>
+                                                                                    <Icon name="ShieldCheck" size={12}/> 健康度 {h}%
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                    {backupTypes.map(t => {
+                                                                        const isDone = folder.backups?.[t.id]?.active;
+                                                                        const content = (
+                                                                            <span className={`inline-flex items-center gap-2 font-bold ${isDone ? 'text-blue-600' : 'text-slate-200'}`}>
+                                                                                {isDone ? <Icon name="CheckCircle2" size={18} /> : <Icon name="Circle" size={18} />}
+                                                                                <span className="text-xs">{isDone ? '已備份' : '未備份'}</span>
+                                                                            </span>
+                                                                        );
+                                                                        return (
+                                                                            <td key={t.id} className="p-4">
+                                                                                {isBulkMode ? (
+                                                                                    content
+                                                                                ) : (
+                                                                                    <button onClick={(e) => { e.stopPropagation(); toggleBackupStatus(folder.id, t.id); }} className="w-full text-left p-3 rounded-2xl hover:bg-slate-50 transition-colors">
+                                                                                        {content}
+                                                                                        {isDone && folder.backups?.[t.id]?.date && <div className="mt-1 text-[10px] font-bold text-slate-400">{folder.backups?.[t.id]?.date}</div>}
+                                                                                    </button>
+                                                                                )}
+                                                                            </td>
+                                                                        );
+                                                                    })}
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )
                                 ) : viewMode === 'grid' ? (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         {processedFolders.map((folder, idx) => {
